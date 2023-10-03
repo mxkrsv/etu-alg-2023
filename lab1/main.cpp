@@ -19,6 +19,7 @@ template <typename T> class square_matrix {
 	public:
 	square_matrix(size_t size);
 	square_matrix<T>(char *);
+	~square_matrix();
 
 	void add(const square_matrix<T> *);
 	void sub(const square_matrix<T> *);
@@ -50,6 +51,18 @@ template <typename T> square_matrix<T>::square_matrix(size_t size) {
 
 template <typename T> square_matrix<T>::square_matrix(char *s) {
 	this->from_string(s);
+}
+
+template <typename T> square_matrix<T>::~square_matrix() {
+	assert(this->size > 0);
+	assert(this->rows != NULL);
+
+	for (size_t i = 0; i < this->size; i++) {
+		assert(this->rows[i] != NULL);
+		free(this->rows[i]);
+	}
+
+	free(this->rows);
 }
 
 template <typename T> char *square_matrix<T>::to_string() {
@@ -206,7 +219,11 @@ square_matrix<T> *square_matrix<T>::submatrix(const size_t rows[],
 		}
 	}
 
-	DPRINTF("%s", subm->to_string());
+#ifdef DEBUG
+	char *str = subm->to_string();
+	DPRINTF("%s", str);
+	free(str);
+#endif
 
 	return subm;
 }
@@ -296,10 +313,10 @@ bapprox_matrix<T> *bapprox_matrix<T>::block_approx(size_t bsize) {
 
 	for (size_t i = 0; i < this->size / bsize; i++) {
 		for (size_t j = 0; j < this->size / bsize; j++) {
-			apprm->rows[i][j] =
-				this->get_block(i * bsize, (i + 1) * bsize,
-						j * bsize, (j + 1) * bsize)
-					->avg();
+			auto blk = this->get_block(i * bsize, (i + 1) * bsize,
+						   j * bsize, (j + 1) * bsize);
+			apprm->rows[i][j] = blk->avg();
+			delete blk;
 		}
 	}
 
@@ -313,7 +330,15 @@ int main(int argc, char *argv[]) {
 	assert(scanf("%99[^\n]s", s) > 0);
 	bapprox_matrix<int> *m = new bapprox_matrix<int>(s);
 
-	printf("%s", m->to_string());
+	char *m_s = m->to_string();
+	printf("%s", m_s);
+	free(m_s);
 
-	printf("%s", m->block_approx(1ULL << atoll(argv[1]))->to_string());
+	auto bappr = m->block_approx(1ULL << atoll(argv[1]));
+	m_s = bappr->to_string();
+	delete bappr;
+	printf("%s", m_s);
+	free(m_s);
+
+	delete m;
 }
