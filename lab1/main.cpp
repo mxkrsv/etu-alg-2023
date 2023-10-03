@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define IS_A_POWER_OF_TWO(x) x != 0 && (x & (x - 1)) == 0
 
@@ -327,22 +328,65 @@ bapprox_matrix<T> *bapprox_matrix<T>::block_approx(size_t bsize) {
 	return apprm;
 }
 
-int main(int argc, char *argv[]) {
-	assert(argc == 2);
-
+static int single(size_t bsize) {
 	char s[100];
 	assert(scanf("%99[^\n]s", s) > 0);
 	bapprox_matrix<int> *m = new bapprox_matrix<int>(s);
 
 	char *m_s = m->to_string();
-	printf("%s", m_s);
+	printf("performing block approximation (block size: %zu) of matrix "
+	       "(size: %zu):\n%s",
+	       bsize, m->get_size(), m_s);
 	free(m_s);
 
-	auto bappr = m->block_approx(1ULL << atoll(argv[1]));
+	auto bappr = m->block_approx(bsize);
 	m_s = bappr->to_string();
 	delete bappr;
-	printf("%s", m_s);
+	printf("result:\n%s", m_s);
 	free(m_s);
 
 	delete m;
+
+	return 0;
+}
+
+template <typename T> static bapprox_matrix<T> *gen_matrix(size_t msize) {
+	return new bapprox_matrix<T>(msize);
+}
+
+static int test() {
+	size_t msizes[] = {200, 400, 800, 1600, 3200};
+	size_t msize_cnt = sizeof(msizes) / sizeof(msizes[0]);
+
+	for (size_t i = 0; i < msize_cnt; i++) {
+		auto m = gen_matrix<int>(msizes[i]);
+
+		printf("size: %zu, CPU time: ", msizes[i]);
+		fflush(stdout);
+
+		clock_t prev_cpu_time = clock();
+
+		auto tmp = m->block_approx(2);
+
+		clock_t cur_cpu_time = clock();
+
+		printf("%f s\n",
+		       (double)(cur_cpu_time - prev_cpu_time) / CLOCKS_PER_SEC);
+
+		delete tmp;
+		delete m;
+	}
+
+	return 0;
+}
+
+int main(int argc, char *argv[]) {
+	if (argc == 1) {
+		return test();
+	} else if (argc == 2) {
+		return single(1ULL << atoll(argv[1]));
+	} else {
+		fprintf(stderr, "invalid args\n");
+		return EXIT_FAILURE;
+	}
 }
