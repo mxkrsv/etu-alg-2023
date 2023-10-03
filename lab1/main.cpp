@@ -17,7 +17,7 @@
 template <typename T> class square_matrix {
 	public:
 	square_matrix(size_t size);
-	square_matrix<T>(char *);
+	square_matrix(char *);
 	~square_matrix();
 
 	void add(const square_matrix<T> *);
@@ -28,9 +28,10 @@ template <typename T> class square_matrix {
 	char *to_string();
 	size_t get_size();
 
+	T **rows;
+
 	protected:
 	size_t size;
-	T **rows;
 
 	private:
 	void from_string(char *);
@@ -233,15 +234,26 @@ square_matrix<T> *square_matrix<T>::submatrix(const size_t rows[],
 }
 
 template <typename T> class bapprox_matrix : public square_matrix<T> {
-	using square_matrix<T>::square_matrix;
-
 	public:
-	bapprox_matrix<T> *block_approx(size_t);
+	bapprox_matrix(size_t size);
+	bapprox_matrix(char *);
+
+	square_matrix<T> *block_approx(size_t);
 
 	private:
 	T avg();
 	bapprox_matrix<T> *get_block(size_t, size_t, size_t, size_t);
 };
+
+template <typename T>
+bapprox_matrix<T>::bapprox_matrix(size_t size) : square_matrix<T>(size) {
+	assert(this->size % 2 == 0);
+}
+
+template <typename T>
+bapprox_matrix<T>::bapprox_matrix(char *s) : square_matrix<T>(s) {
+	assert(this->size % 2 == 0);
+}
 
 template <typename T> T bapprox_matrix<T>::avg() {
 	assert(this != NULL);
@@ -302,12 +314,12 @@ bapprox_matrix<T> *bapprox_matrix<T>::get_block(size_t rowl, size_t rowh,
 }
 
 template <typename T>
-bapprox_matrix<T> *bapprox_matrix<T>::block_approx(size_t bsize) {
+square_matrix<T> *bapprox_matrix<T>::block_approx(size_t bsize) {
 	assert(this->size >= bsize);
 	assert(IS_A_POWER_OF_TWO(bsize));
 	assert(this->size % bsize == 0);
 
-	bapprox_matrix<T> *apprm = new bapprox_matrix<T>(this->size / bsize);
+	square_matrix<T> *apprm = new square_matrix<T>(this->size / bsize);
 
 	for (size_t i = 0; i < this->size / bsize; i++) {
 		for (size_t j = 0; j < this->size / bsize; j++) {
