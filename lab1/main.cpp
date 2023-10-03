@@ -27,6 +27,7 @@ template <typename T> class square_matrix {
 	square_matrix<T> *submatrix(const size_t[], const size_t[], size_t);
 
 	char *to_string();
+	size_t get_size();
 
 	protected:
 	size_t size;
@@ -80,6 +81,10 @@ template <typename T> char *square_matrix<T>::to_string() {
 	}
 
 	return ret;
+}
+
+template <typename T> size_t square_matrix<T>::get_size() {
+	return this->size;
 }
 
 static size_t count_tokens(const char *str, const char *sep) {
