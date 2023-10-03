@@ -13,7 +13,7 @@ template <typename T> class square_matrix {
 	void add(const square_matrix<T> *);
 	void sub(const square_matrix<T> *);
 	void mul(T);
-	square_matrix<T> submatrix(const size_t[], const size_t[], size_t);
+	square_matrix<T> *submatrix(const size_t[], const size_t[], size_t);
 
 	char *to_string();
 	void from_string(char *);
@@ -145,17 +145,17 @@ static bool is_element(T elem, const T arr[], size_t len) {
 }
 
 template <typename T>
-square_matrix<T> square_matrix<T>::submatrix(const size_t rows[],
-					     const size_t cols[],
-					     size_t rowccolc) {
+square_matrix<T> *square_matrix<T>::submatrix(const size_t rows[],
+					      const size_t cols[],
+					      size_t rowccolc) {
 	assert(rows != NULL && cols != NULL);
 	assert(rowccolc <= this->size);
 	assert(this->rows != NULL);
 
-	square_matrix<T> subm;
-	subm.size = rowccolc;
-	subm.rows = (T **)malloc(sizeof(subm.rows[0]) * subm.size);
-	assert(subm.rows != NULL);
+	square_matrix<T> *subm = new square_matrix<T>;
+	subm->size = rowccolc;
+	subm->rows = (T **)malloc(sizeof(subm->rows[0]) * subm->size);
+	assert(subm->rows != NULL);
 
 	fprintf(stderr, "submatrix: rowccolc: %zu\n", rowccolc);
 
@@ -163,16 +163,16 @@ square_matrix<T> square_matrix<T>::submatrix(const size_t rows[],
 	for (size_t i = 0; i < this->size; i++) {
 		assert(this->rows[i] != NULL);
 		if (is_element(i, rows, rowccolc)) {
-			subm.rows[ii] = (T *)malloc(sizeof(subm.rows[0][0]) *
-						    subm.size);
-			assert(subm.rows[ii] != NULL);
+			subm->rows[ii] = (T *)malloc(sizeof(subm->rows[0][0]) *
+						     subm->size);
+			assert(subm->rows[ii] != NULL);
 			size_t jj = 0;
 			for (size_t j = 0; j < this->size; j++) {
 				if (is_element(j, cols, rowccolc)) {
 					fprintf(stderr,
 						"submatrix: adding %d\n",
 						this->rows[i][j]);
-					subm.rows[ii][jj] = this->rows[i][j];
+					subm->rows[ii][jj] = this->rows[i][j];
 					++jj;
 				}
 			}
@@ -188,12 +188,11 @@ square_matrix<T> square_matrix<T>::submatrix(const size_t rows[],
 template <typename T> class bapprox_matrix : public square_matrix<T> {
 	public:
 	void from_string(char *);
-	void from_square_matrix(square_matrix<T>);
 	bapprox_matrix<T> block_approx(size_t);
 
 	private:
 	T avg();
-	bapprox_matrix<T> get_block(size_t, size_t, size_t, size_t);
+	bapprox_matrix<T> *get_block(size_t, size_t, size_t, size_t);
 };
 
 template <typename T> void bapprox_matrix<T>::from_string(char *str) {
@@ -202,23 +201,14 @@ template <typename T> void bapprox_matrix<T>::from_string(char *str) {
 	assert(IS_A_POWER_OF_TWO(this->size));
 }
 
-template <typename T>
-void bapprox_matrix<T>::from_square_matrix(square_matrix<T> sq_mx) {
-	fprintf(stderr, "size: %zu\n", sq_mx.size);
-	assert(IS_A_POWER_OF_TWO(sq_mx.size));
-	this->size = sq_mx.size;
-	this->rows = sq_mx.rows;
-
-	fprintf(stderr, "%s", sq_mx.to_string());
-	fprintf(stderr, "%s", this->to_string());
-}
-
 template <typename T> T bapprox_matrix<T>::avg() {
+	assert(this != NULL);
 	assert(this->rows != NULL);
 	fprintf(stderr, "avg: size: %zu\n", this->size);
 	T sum = 0;
 
 	for (size_t i = 0; i < this->size; i++) {
+		assert(this->rows[i] != NULL);
 		for (size_t j = 0; j < this->size; j++) {
 			fprintf(stderr, "avg: adding %d\n", this->rows[i][j]);
 			sum += this->rows[i][j];
@@ -243,8 +233,8 @@ static size_t *range(size_t l, size_t h) {
 }
 
 template <typename T>
-bapprox_matrix<T> bapprox_matrix<T>::get_block(size_t rowl, size_t rowh,
-					       size_t coll, size_t colh) {
+bapprox_matrix<T> *bapprox_matrix<T>::get_block(size_t rowl, size_t rowh,
+						size_t coll, size_t colh) {
 	assert(rowh > rowl && colh > coll);
 	assert(rowh - rowl == colh - coll);
 	assert(this->size > 0 && this->rows != NULL);
@@ -259,9 +249,10 @@ bapprox_matrix<T> bapprox_matrix<T>::get_block(size_t rowl, size_t rowh,
 
 	fprintf(stderr, "get_block: subm size: %zu\n", rowh - rowl);
 
-	bapprox_matrix<T> ret;
-	ret.from_square_matrix(
-		square_matrix<T>::submatrix(rows, cols, rowh - rowl));
+	square_matrix<T> *tmp = this->submatrix(rows, cols, rowh - rowl);
+	assert(tmp != NULL);
+	bapprox_matrix<T> *ret = static_cast<bapprox_matrix<T> *>(tmp);
+	assert(ret != NULL);
 
 	free(rows);
 	free(cols);
@@ -289,7 +280,7 @@ bapprox_matrix<T> bapprox_matrix<T>::block_approx(size_t bsize) {
 			apprm.rows[i][j] =
 				this->get_block(i * bsize, (i + 1) * bsize,
 						j * bsize, (j + 1) * bsize)
-					.avg();
+					->avg();
 		}
 	}
 
