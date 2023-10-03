@@ -7,8 +7,6 @@
 
 #define IS_A_POWER_OF_TWO(x) x != 0 && (x & (x - 1)) == 0
 
-#define DEBUG
-
 #ifdef DEBUG
 #define DPRINTF(...) fprintf(stderr, __VA_ARGS__)
 #else
