@@ -236,19 +236,12 @@ template <typename T> class bapprox_matrix : public square_matrix<T> {
 	using square_matrix<T>::square_matrix;
 
 	public:
-	void from_string(char *);
 	bapprox_matrix<T> *block_approx(size_t);
 
 	private:
 	T avg();
 	bapprox_matrix<T> *get_block(size_t, size_t, size_t, size_t);
 };
-
-template <typename T> void bapprox_matrix<T>::from_string(char *str) {
-	square_matrix<T>::from_string(str);
-
-	assert(IS_A_POWER_OF_TWO(this->size));
-}
 
 template <typename T> T bapprox_matrix<T>::avg() {
 	assert(this != NULL);
