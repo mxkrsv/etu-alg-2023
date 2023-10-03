@@ -18,6 +18,7 @@ template <typename T> class square_matrix {
 	char *to_string();
 	void from_string(char *);
 
+	protected:
 	T **rows;
 };
 
