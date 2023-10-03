@@ -313,6 +313,7 @@ template <typename T>
 bapprox_matrix<T> *bapprox_matrix<T>::block_approx(size_t bsize) {
 	assert(this->size >= bsize);
 	assert(IS_A_POWER_OF_TWO(bsize));
+	assert(this->size % bsize == 0);
 
 	bapprox_matrix<T> *apprm = new bapprox_matrix<T>(this->size / bsize);
 
