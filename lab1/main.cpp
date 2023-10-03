@@ -7,6 +7,14 @@
 
 #define IS_A_POWER_OF_TWO(x) x != 0 && (x & (x - 1)) == 0
 
+#define DEBUG
+
+#ifdef DEBUG
+#define DPRINTF(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define DPRINTF(...) ;
+#endif
+
 template <typename T> class square_matrix {
 	public:
 	size_t size;
@@ -158,7 +166,7 @@ square_matrix<T> *square_matrix<T>::submatrix(const size_t rows[],
 	subm->rows = (T **)malloc(sizeof(subm->rows[0]) * subm->size);
 	assert(subm->rows != NULL);
 
-	fprintf(stderr, "submatrix: rowccolc: %zu\n", rowccolc);
+	DPRINTF("submatrix: rowccolc: %zu\n", rowccolc);
 
 	size_t ii = 0;
 	for (size_t i = 0; i < this->size; i++) {
@@ -170,8 +178,7 @@ square_matrix<T> *square_matrix<T>::submatrix(const size_t rows[],
 			size_t jj = 0;
 			for (size_t j = 0; j < this->size; j++) {
 				if (is_element(j, cols, rowccolc)) {
-					fprintf(stderr,
-						"submatrix: adding %d\n",
+					DPRINTF("submatrix: adding %d\n",
 						this->rows[i][j]);
 					subm->rows[ii][jj] = this->rows[i][j];
 					++jj;
@@ -181,7 +188,7 @@ square_matrix<T> *square_matrix<T>::submatrix(const size_t rows[],
 		}
 	}
 
-	fprintf(stderr, "%s", subm.to_string());
+	DPRINTF("%s", subm->to_string());
 
 	return subm;
 }
@@ -205,18 +212,18 @@ template <typename T> void bapprox_matrix<T>::from_string(char *str) {
 template <typename T> T bapprox_matrix<T>::avg() {
 	assert(this != NULL);
 	assert(this->rows != NULL);
-	fprintf(stderr, "avg: size: %zu\n", this->size);
+	DPRINTF("avg: size: %zu\n", this->size);
 	T sum = 0;
 
 	for (size_t i = 0; i < this->size; i++) {
 		assert(this->rows[i] != NULL);
 		for (size_t j = 0; j < this->size; j++) {
-			fprintf(stderr, "avg: adding %d\n", this->rows[i][j]);
+			DPRINTF("avg: adding %d\n", this->rows[i][j]);
 			sum += this->rows[i][j];
 		}
 	}
 
-	fprintf(stderr, "avg: sum: %d\n", sum);
+	DPRINTF("avg: sum: %d\n", sum);
 
 	return sum / (this->size * this->size);
 }
@@ -240,15 +247,14 @@ bapprox_matrix<T> *bapprox_matrix<T>::get_block(size_t rowl, size_t rowh,
 	assert(rowh - rowl == colh - coll);
 	assert(this->size > 0 && this->rows != NULL);
 
-	fprintf(stderr,
-		"get_block: rowl: %zu, rowh: %zu, coll: %zu, colh: %zu\n", rowl,
+	DPRINTF("get_block: rowl: %zu, rowh: %zu, coll: %zu, colh: %zu\n", rowl,
 		rowh, coll, colh);
 
 	size_t *rows = range(rowl, rowh);
 	size_t *cols = range(coll, colh);
 	assert(rows != NULL && cols != NULL);
 
-	fprintf(stderr, "get_block: subm size: %zu\n", rowh - rowl);
+	DPRINTF("get_block: subm size: %zu\n", rowh - rowl);
 
 	square_matrix<T> *tmp = this->submatrix(rows, cols, rowh - rowl);
 	assert(tmp != NULL);
