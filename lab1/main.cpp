@@ -17,18 +17,40 @@
 
 template <typename T> class square_matrix {
 	public:
-	size_t size;
+	square_matrix(size_t size);
+	square_matrix<T>(char *);
+
 	void add(const square_matrix<T> *);
 	void sub(const square_matrix<T> *);
 	void mul(T);
 	square_matrix<T> *submatrix(const size_t[], const size_t[], size_t);
 
 	char *to_string();
-	void from_string(char *);
 
 	protected:
+	size_t size;
 	T **rows;
+
+	private:
+	void from_string(char *);
 };
+
+template <typename T> square_matrix<T>::square_matrix(size_t size) {
+	assert(size > 0);
+
+	this->size = size;
+	this->rows = (T **)malloc(sizeof(this->rows[0]) * size);
+	assert(this->rows != NULL);
+
+	for (size_t i = 0; i < size; i++) {
+		this->rows[i] = (T *)malloc(sizeof(this->rows[0][0]) * size);
+		assert(this->rows[i] != NULL);
+	}
+}
+
+template <typename T> square_matrix<T>::square_matrix(char *s) {
+	this->from_string(s);
+}
 
 template <typename T> char *square_matrix<T>::to_string() {
 	assert(this->rows != NULL);
@@ -161,9 +183,7 @@ square_matrix<T> *square_matrix<T>::submatrix(const size_t rows[],
 	assert(rowccolc <= this->size);
 	assert(this->rows != NULL);
 
-	square_matrix<T> *subm = new square_matrix<T>;
-	subm->size = rowccolc;
-	subm->rows = (T **)malloc(sizeof(subm->rows[0]) * subm->size);
+	square_matrix<T> *subm = new square_matrix<T>(rowccolc);
 	assert(subm->rows != NULL);
 
 	DPRINTF("submatrix: rowccolc: %zu\n", rowccolc);
@@ -172,8 +192,6 @@ square_matrix<T> *square_matrix<T>::submatrix(const size_t rows[],
 	for (size_t i = 0; i < this->size; i++) {
 		assert(this->rows[i] != NULL);
 		if (is_element(i, rows, rowccolc)) {
-			subm->rows[ii] = (T *)malloc(sizeof(subm->rows[0][0]) *
-						     subm->size);
 			assert(subm->rows[ii] != NULL);
 			size_t jj = 0;
 			for (size_t j = 0; j < this->size; j++) {
@@ -194,9 +212,11 @@ square_matrix<T> *square_matrix<T>::submatrix(const size_t rows[],
 }
 
 template <typename T> class bapprox_matrix : public square_matrix<T> {
+	using square_matrix<T>::square_matrix;
+
 	public:
 	void from_string(char *);
-	bapprox_matrix<T> block_approx(size_t);
+	bapprox_matrix<T> *block_approx(size_t);
 
 	private:
 	T avg();
@@ -268,23 +288,15 @@ bapprox_matrix<T> *bapprox_matrix<T>::get_block(size_t rowl, size_t rowh,
 }
 
 template <typename T>
-bapprox_matrix<T> bapprox_matrix<T>::block_approx(size_t bsize) {
+bapprox_matrix<T> *bapprox_matrix<T>::block_approx(size_t bsize) {
 	assert(this->size >= bsize);
 	assert(IS_A_POWER_OF_TWO(bsize));
 
-	bapprox_matrix<T> apprm;
-	apprm.size = this->size / bsize;
-	assert(apprm.size >= 1);
-	apprm.rows = (T **)malloc(sizeof(apprm.rows[0]) * apprm.size);
-	assert(apprm.rows != NULL);
+	bapprox_matrix<T> *apprm = new bapprox_matrix<T>(this->size / bsize);
 
 	for (size_t i = 0; i < this->size / bsize; i++) {
-		apprm.rows[i] =
-			(T *)malloc(sizeof(apprm.rows[0][0]) * apprm.size);
-		assert(apprm.rows[i] != NULL);
-
 		for (size_t j = 0; j < this->size / bsize; j++) {
-			apprm.rows[i][j] =
+			apprm->rows[i][j] =
 				this->get_block(i * bsize, (i + 1) * bsize,
 						j * bsize, (j + 1) * bsize)
 					->avg();
@@ -297,13 +309,11 @@ bapprox_matrix<T> bapprox_matrix<T>::block_approx(size_t bsize) {
 int main(int argc, char *argv[]) {
 	assert(argc == 2);
 
-	bapprox_matrix<int> m;
-
 	char s[100];
 	assert(scanf("%99[^\n]s", s) > 0);
-	m.from_string(s);
+	bapprox_matrix<int> *m = new bapprox_matrix<int>(s);
 
-	printf("%s", m.to_string());
+	printf("%s", m->to_string());
 
-	printf("%s", m.block_approx(1ULL << atoll(argv[1])).to_string());
+	printf("%s", m->block_approx(1ULL << atoll(argv[1]))->to_string());
 }
