@@ -104,7 +104,7 @@ static size_t count_tokens(const char *str, const char *sep) {
 	return ret;
 }
 
-template <typename T> T *scan_row(char *str, size_t *n) {
+template <typename T> static T *scan_row(char *str, size_t *n) {
 	assert(str != NULL && n != NULL);
 
 	if (*n == 0) {
@@ -334,8 +334,8 @@ square_matrix<T> *bapprox_matrix<T>::block_approx(size_t bsize) {
 }
 
 static int single(size_t bsize) {
-	char s[100];
-	assert(scanf("%99[^\n]s", s) > 0);
+	char s[200];
+	assert(scanf("%199[^\n]s", s) > 0);
 	bapprox_matrix<int> *m = new bapprox_matrix<int>(s);
 
 	char *m_s = m->to_string();
