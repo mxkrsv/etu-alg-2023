@@ -1,5 +1,5 @@
 build: main.cpp
-	g++ main.cpp -o main
+	g++ -Wall -Wextra -pedantic main.cpp -o main -g
 
 clean: main
 	rm main

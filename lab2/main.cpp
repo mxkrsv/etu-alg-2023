@@ -1,10 +1,10 @@
 #include <assert.h>
 #include <cstddef>
 #include <cstdlib>
+#include <functional>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #define IS_A_POWER_OF_TWO(x) x != 0 && (x & (x - 1)) == 0
 
@@ -37,11 +37,40 @@ template <typename T> class square_matrix {
 	public:
 	square_matrix(size_t size);
 	square_matrix(char *);
+	square_matrix(const square_matrix<T> &);
 	~square_matrix();
 
 	void add(const square_matrix<T> *);
 	void sub(const square_matrix<T> *);
 	void mul(T);
+	void mul(const square_matrix<T> *);
+
+	square_matrix<T> operator=(const square_matrix<T> &op) {
+		*this = square_matrix<T>(op);
+		return *this;
+	}
+	square_matrix<T> operator+(const square_matrix<T> op) {
+		square_matrix<T> nm(this);
+		nm.add(&op);
+		return nm;
+	};
+	square_matrix<T> operator-(const square_matrix<T> op) {
+		square_matrix<T> nm(this);
+		nm.sub(&op);
+		return nm;
+	};
+	square_matrix<T> operator*(T op) {
+		DPRINTF("multiplication operator called\n");
+		square_matrix<T> nm(this);
+		nm.mul(&op);
+		return nm;
+	};
+	square_matrix<T> operator*(const square_matrix<T> op) {
+		square_matrix<T> nm(*this);
+		nm.mul(&op);
+		return nm;
+	};
+
 	square_matrix<T> *submatrix(const size_t[], const size_t[], size_t);
 
 	char *to_string();
@@ -59,6 +88,8 @@ template <typename T> class square_matrix {
 template <typename T> square_matrix<T>::square_matrix(size_t size) {
 	assert(size > 0);
 
+	DPRINTF("allocation constructor called\n");
+
 	this->size = size;
 	this->rows = (T **)malloc(sizeof(this->rows[0]) * size);
 	assert(this->rows != NULL);
@@ -73,12 +104,28 @@ template <typename T> square_matrix<T>::square_matrix(char *s) {
 	this->from_string(s);
 }
 
-template <typename T> square_matrix<T>::~square_matrix() {
-	assert(this->size > 0);
-	assert(this->rows != NULL);
+template <typename T>
+square_matrix<T>::square_matrix(const square_matrix<T> &other)
+    : square_matrix(other.size) {
+	assert(other.rows && other.size);
+	assert(this->rows && this->size);
+
+	DPRINTF("copy constructor called\n");
 
 	for (size_t i = 0; i < this->size; i++) {
-		assert(this->rows[i] != NULL);
+		assert(this->rows[i] && other.rows[i]);
+		memcpy(this->rows[i], other.rows[i],
+		       sizeof(this->rows[0][0]) * this->size);
+	}
+}
+
+template <typename T> square_matrix<T>::~square_matrix() {
+	assert(this);
+	assert(this->size);
+	assert(this->rows);
+
+	for (size_t i = 0; i < this->size; i++) {
+		assert(this->rows[i]);
 		free(this->rows[i]);
 	}
 
@@ -86,14 +133,16 @@ template <typename T> square_matrix<T>::~square_matrix() {
 }
 
 template <typename T> char *square_matrix<T>::to_string() {
-	assert(this->rows != NULL);
+	assert(this);
+	assert(this->rows);
 	char *ret = (char *)malloc(sizeof(char) * 1024);
-	assert(ret != NULL);
+	assert(ret);
 
 	char *pos = ret;
 	for (size_t i = 0; i < this->size; i++) {
-		assert(this->rows[i] != NULL);
+		assert(this->rows[i]);
 		for (size_t j = 0; j < this->size; j++) {
+			DPRINTF("%zu: %p\n", i, this->rows[i]);
 			pos += sprintf(pos, "%d%c", this->rows[i][j],
 				       j == this->size - 1 ? '\n' : ' ');
 		}
@@ -200,6 +249,41 @@ template <typename T> void square_matrix<T>::mul(T num) {
 }
 
 template <typename T>
+static T linear_combination(std::function<T(size_t)> set1_subscript,
+			    std::function<T(size_t)> set2_subscript,
+			    size_t len) {
+	T acc = 0;
+	for (size_t i = 0; i < len; i++) {
+		acc += set1_subscript(i) * set2_subscript(i);
+	}
+	return acc;
+}
+
+template <typename T>
+void square_matrix<T>::mul(const square_matrix<T> *other) {
+	assert(this->rows && this->size);
+	assert(other->rows && other->size);
+	assert(this->size == other->size);
+
+	square_matrix<T> tmp(*this);
+
+	for (size_t i = 0; i < this->size; i++) {
+		assert(this->rows[i] && other->rows[i]);
+		for (size_t j = 0; j < this->size; j++) {
+			this->rows[i][j] = linear_combination(
+				(std::function<T(size_t)>)[
+					i, tmp
+				](size_t idx)->T { return tmp.rows[i][idx]; },
+				(std::function<T(size_t)>)[ j, other ](
+					size_t idx)->T {
+					return other->rows[idx][j];
+				},
+				this->size);
+		}
+	}
+}
+
+template <typename T>
 static bool is_element(T elem, const T arr[], size_t len) {
 	assert(arr != NULL);
 
@@ -252,155 +336,75 @@ square_matrix<T> *square_matrix<T>::submatrix(const size_t rows[],
 	return subm;
 }
 
-template <typename T> class bapprox_matrix : public square_matrix<T> {
-	public:
-	bapprox_matrix(size_t size);
-	bapprox_matrix(char *);
-
-	square_matrix<T> *block_approx(size_t);
-
-	private:
-	T avg();
-	bapprox_matrix<T> *get_block(size_t, size_t, size_t, size_t);
-};
-
-template <typename T>
-bapprox_matrix<T>::bapprox_matrix(size_t size) : square_matrix<T>(size) {
-	assert(this->size % 2 == 0);
-}
-
-template <typename T>
-bapprox_matrix<T>::bapprox_matrix(char *s) : square_matrix<T>(s) {
-	assert(this->size % 2 == 0);
-}
-
-template <typename T> T bapprox_matrix<T>::avg() {
-	assert(this != NULL);
-	assert(this->rows != NULL);
-	DPRINTF("avg: size: %zu\n", this->size);
-	T sum = 0;
-
-	for (size_t i = 0; i < this->size; i++) {
-		assert(this->rows[i] != NULL);
-		for (size_t j = 0; j < this->size; j++) {
-			DPRINTF("avg: adding %d\n", this->rows[i][j]);
-			sum += this->rows[i][j];
-		}
-	}
-
-	DPRINTF("avg: sum: %d\n", sum);
-
-	return sum / (this->size * this->size);
-}
-
 static size_t *range(size_t l, size_t h) {
 	assert(h > l);
 	size_t *ret = (size_t *)malloc(sizeof(ret[0]) * (h - l));
 	assert(ret != NULL);
 
-	for (size_t i = 0, n = l; l < h; i++, l++) {
+	for (size_t i = 0; l < h; i++, l++) {
 		ret[i] = l;
 	}
 
 	return ret;
 }
 
-template <typename T>
-bapprox_matrix<T> *bapprox_matrix<T>::get_block(size_t rowl, size_t rowh,
-						size_t coll, size_t colh) {
-	assert(rowh > rowl && colh > coll);
-	assert(rowh - rowl == colh - coll);
-	assert(this->size > 0 && this->rows != NULL);
-
-	DPRINTF("get_block: rowl: %zu, rowh: %zu, coll: %zu, colh: %zu\n", rowl,
-		rowh, coll, colh);
-
-	size_t *rows = range(rowl, rowh);
-	size_t *cols = range(coll, colh);
-	assert(rows != NULL && cols != NULL);
-
-	DPRINTF("get_block: subm size: %zu\n", rowh - rowl);
-
-	square_matrix<T> *tmp = this->submatrix(rows, cols, rowh - rowl);
-	assert(tmp != NULL);
-	bapprox_matrix<T> *ret = static_cast<bapprox_matrix<T> *>(tmp);
-	assert(ret != NULL);
-
-	free(rows);
-	free(cols);
-
-	return ret;
-}
-
-template <typename T>
-square_matrix<T> *bapprox_matrix<T>::block_approx(size_t bsize) {
-	assert(this->size >= bsize);
-	assert(IS_A_POWER_OF_TWO(bsize));
-	assert(this->size % bsize == 0);
-
-	square_matrix<T> *apprm = new square_matrix<T>(this->size / bsize);
-
-	for (size_t i = 0; i < this->size / bsize; i++) {
-		for (size_t j = 0; j < this->size / bsize; j++) {
-			auto blk = this->get_block(i * bsize, (i + 1) * bsize,
-						   j * bsize, (j + 1) * bsize);
-			apprm->rows[i][j] = blk->avg();
-			delete blk;
-		}
+template <typename T> static T exp(T base, size_t n) {
+	DPRINTF("exponentiation function called\n");
+	switch (n) {
+		case 0:
+			fprintf(stderr, "a zero power would be a special case, "
+					"not implemented\n");
+			exit(1);
+		case 1:
+			return base;
 	}
-
-	return apprm;
+	if (n % 2 == 0) {
+		return exp(base * base, n / 2);
+	} else {
+		return base * exp(base * base, (n - 1) / 2);
+	}
 }
 
-static int single(size_t bsize) {
+static int single(size_t pow) {
 	char s[200];
 	assert(scanf("%199[^\n]s", s) > 0);
-	bapprox_matrix<int> *m = new bapprox_matrix<int>(s);
+	square_matrix<int> m(s);
 
-	char *m_s = m->to_string();
-	printf("performing block approximation (block size: %zu) of matrix "
+	char *m_s = m.to_string();
+	printf("performing exponentiation (n: %zu) of base matrix "
 	       "(size: %zu):\n%s",
-	       bsize, m->get_size(), m_s);
+	       pow, m.get_size(), m_s);
 	free(m_s);
 
-	auto bappr = m->block_approx(bsize);
-	m_s = bappr->to_string();
-	delete bappr;
+	square_matrix<int> p = exp<square_matrix<int>>(m, pow);
+	// square_matrix<int> p = &m;
+
+	m_s = p.to_string();
 	printf("result:\n%s", m_s);
 	free(m_s);
-
-	delete m;
 
 	printf("maximum allocated memory: %zu\n", max_alloc);
 
 	return 0;
 }
 
-template <typename T> static bapprox_matrix<T> *gen_matrix(size_t msize) {
-	return new bapprox_matrix<T>(msize);
+template <typename T> static square_matrix<T> gen_matrix(size_t msize) {
+	return square_matrix<T>(msize);
 }
 
 static int test() {
-	size_t msizes[] = {200, 400, 800, 1600, 3200};
+	size_t msizes[] = {2, 4, 8, 16, 32, 64, 128};
 	size_t msize_cnt = sizeof(msizes) / sizeof(msizes[0]);
 
 	for (size_t i = 0; i < msize_cnt; i++) {
-		auto m = gen_matrix<int>(msizes[i]);
+		square_matrix<int> m = gen_matrix<int>(msizes[i]);
 
-		printf("size: %zu, CPU time: ", msizes[i]);
+		printf("size: %zu, ", msizes[i]);
 		fflush(stdout);
 
-		clock_t prev_cpu_time = clock();
+		square_matrix<int> tmp = exp(m, 20);
 
-		auto tmp = m->block_approx(2);
-
-		clock_t cur_cpu_time = clock();
-
-		printf("%f s\n",
-		       (double)(cur_cpu_time - prev_cpu_time) / CLOCKS_PER_SEC);
-
-		delete tmp;
-		delete m;
+		printf("maximum allocated memory: %zu b\n", max_alloc);
 	}
 
 	return 0;
@@ -410,7 +414,7 @@ int main(int argc, char *argv[]) {
 	if (argc == 1) {
 		return test();
 	} else if (argc == 2) {
-		return single(1ULL << atoll(argv[1]));
+		return single(atoll(argv[1]));
 	} else {
 		fprintf(stderr, "invalid args\n");
 		return EXIT_FAILURE;
