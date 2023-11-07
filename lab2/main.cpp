@@ -2,7 +2,6 @@
 #include <cstddef>
 #include <cstdlib>
 #include <functional>
-#include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,41 +18,20 @@ static size_t cur_alloc = 0;
 static size_t max_alloc = 0;
 
 static void *my_malloc(size_t size) {
-	void *tmp = malloc(size);
-	assert(tmp);
-	cur_alloc += malloc_usable_size(tmp);
+	cur_alloc += size;
 	if (cur_alloc > max_alloc) {
 		max_alloc = cur_alloc;
 	}
-	return tmp;
+	return malloc(size);
 }
 
-static void my_free(void *ptr) {
-	assert(ptr);
-	cur_alloc -= malloc_usable_size(ptr);
+template <typename T> static void my_free(T *ptr) {
+	cur_alloc -= sizeof(*ptr);
 	free(ptr);
 }
 
 #define malloc my_malloc
 #define free my_free
-
-static size_t cur_stack = 0;
-static size_t max_stack = 0;
-
-/*
-#define FUNCTION_START                                                         \
-	asm("addq %%rbp, %0; subq %%rsp, %0" : "+r"(cur_stack));               \
-	if (cur_stack > max_stack)                                             \
-		max_stack = cur_stack;
-*/
-#define FUNCTION_START                                                         \
-	asm("movq %%rbp, %%rax; subq %%rsp, %%rax; addq %%rax, %0"             \
-	    : "+r"(cur_stack));                                                \
-	if (cur_stack > max_stack)                                             \
-		max_stack = cur_stack;
-#define FUNCTION_END                                                           \
-	asm("movq %%rbp, %%rax; subq %%rsp, %%rax; subq %%rax, %0"             \
-	    : "+r"(cur_stack))
 
 template <typename T> class square_matrix {
 	public:
@@ -372,20 +350,14 @@ static size_t *range(size_t l, size_t h) {
 
 template <typename T> static T exp(T base, size_t n) {
 	DPRINTF("exponentiation function called\n");
-	fprintf(stderr, "exp: before: %zu\n", cur_stack);
-	FUNCTION_START;
-	fprintf(stderr, "exp: inside: %zu\n", cur_stack);
 	switch (n) {
 		case 0:
 			fprintf(stderr, "a zero power would be a special case, "
 					"not implemented\n");
 			exit(1);
 		case 1:
-			FUNCTION_END;
 			return base;
 	}
-	FUNCTION_END;
-	fprintf(stderr, "exp: after: %zu\n", cur_stack);
 	if (n % 2 == 0) {
 		return exp(base * base, n / 2);
 	} else {
@@ -433,13 +405,7 @@ static int test() {
 		square_matrix<int> tmp = exp(m, 20);
 
 		printf("maximum allocated memory: %zu b\n", max_alloc);
-		printf("current allocated memory: %zu\n", cur_alloc);
-		printf("maximum stack: %zu b\n", max_stack);
-		printf("current stack: %zu\n", cur_stack);
 	}
-
-	printf("current allocated memory: %zu\n", cur_alloc);
-	printf("current stack: %zu\n", cur_stack);
 
 	return 0;
 }
