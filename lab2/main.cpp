@@ -14,25 +14,6 @@
 #define DPRINTF(...) ;
 #endif
 
-static size_t cur_alloc = 0;
-static size_t max_alloc = 0;
-
-static void *my_malloc(size_t size) {
-	cur_alloc += size;
-	if (cur_alloc > max_alloc) {
-		max_alloc = cur_alloc;
-	}
-	return malloc(size);
-}
-
-template <typename T> static void my_free(T *ptr) {
-	cur_alloc -= sizeof(*ptr);
-	free(ptr);
-}
-
-#define malloc my_malloc
-#define free my_free
-
 template <typename T> class square_matrix {
 	public:
 	square_matrix(size_t size);
@@ -383,8 +364,6 @@ static int single(size_t pow) {
 	printf("result:\n%s", m_s);
 	free(m_s);
 
-	printf("maximum allocated memory: %zu\n", max_alloc);
-
 	return 0;
 }
 
@@ -404,7 +383,7 @@ static int test() {
 
 		square_matrix<int> tmp = exp(m, 20);
 
-		printf("maximum allocated memory: %zu b\n", max_alloc);
+		printf("did something\n");
 	}
 
 	return 0;
