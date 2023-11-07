@@ -5,7 +5,7 @@ BINNAME = $(PROGNAME)
 CXX ?= g++
 
 CFLAGS ?= -O2 -Wall -Wextra -pedantic
-CFLAGS_DEBUG = -O0 -Wall -Wextra -pedantic -fsanitize=address -fsanitize=undefined
+CFLAGS_DEBUG = -O0 -Wall -Wextra -pedantic -fsanitize=address -fsanitize=undefined -DDEBUG
 LDFLAGS_DEBUG = -g
 
 build: debug
