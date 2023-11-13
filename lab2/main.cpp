@@ -105,6 +105,8 @@ template <typename T> square_matrix<T>::~square_matrix() {
 	assert(this->size);
 	assert(this->rows);
 
+	DPRINTF("destructor called\n");
+
 	for (size_t i = 0; i < this->size; i++) {
 		assert(this->rows[i]);
 		free(this->rows[i]);
@@ -371,27 +373,20 @@ template <typename T> static square_matrix<T> gen_matrix(size_t msize) {
 	return square_matrix<T>(msize);
 }
 
-static int test() {
-	size_t msizes[] = {2, 4, 8, 16, 32, 64, 128};
-	size_t msize_cnt = sizeof(msizes) / sizeof(msizes[0]);
+static int test(size_t msize, size_t pow) {
+	square_matrix<int> m = gen_matrix<int>(msize);
 
-	for (size_t i = 0; i < msize_cnt; i++) {
-		square_matrix<int> m = gen_matrix<int>(msizes[i]);
+	DPRINTF("exping a matrix of size %zu to the power of %zu\n", msize,
+		pow);
 
-		printf("size: %zu, ", msizes[i]);
-		fflush(stdout);
-
-		square_matrix<int> tmp = exp(m, 20);
-
-		printf("did something\n");
-	}
+	square_matrix<int> tmp = exp(m, pow);
 
 	return 0;
 }
 
 int main(int argc, char *argv[]) {
-	if (argc == 1) {
-		return test();
+	if (argc == 3) {
+		return test(atoll(argv[2]), atoll(argv[1]));
 	} else if (argc == 2) {
 		return single(atoll(argv[1]));
 	} else {
